@@ -1,50 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="UTF-8">
     <title>Transcript Viewer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 40px;
-            max-width: 800px;
+            max-width: 900px;
         }
-        #box {
-            padding: 20px;
-            background: #f5f5f5;
-            border-radius: 8px;
-            white-space: pre-wrap;
-            line-height: 1.5;
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f7f7f7;
+            border-radius: 6px;
+        }
+        .msg {
+            margin-bottom: 10px;
+        }
+        .speaker {
+            font-weight: bold;
         }
     </style>
 </head>
-
 <body>
+
     <h1>Transcript Viewer</h1>
-    <p>Showing transcript for ID: <b id="tid"></b></p>
-    <div id="box">Loading…</div>
+    <p>Transcript ID: <span id="tid"></span></p>
 
-    <script>
-        // 1. Read URL parameter ?id=
-        const params = new URLSearchParams(window.location.search);
-        const transcriptId = params.get("id");
+    <div id="content">Loading…</div>
 
-        document.getElementById("tid").textContent = transcriptId ?? "None";
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const transcriptId = params.get("id");
 
-        // 2. Fetch JSON from GitHub (same repo, same folder)
-        fetch("transcripts.json")
-            .then(res => res.json())
-            .then(data => {
-                if (transcriptId && data[transcriptId]) {
-                    document.getElementById("box").textContent = data[transcriptId];
-                } else {
-                    document.getElementById("box").textContent = "Transcript not found!";
-                }
-            })
-            .catch(err => {
-                document.getElementById("box").textContent = "Error loading JSON!";
-                console.error(err);
+    document.getElementById("tid").textContent = transcriptId || "None";
+
+    fetch("transcripts.json")
+        .then(res => res.json())
+        .then(data => {
+            // data is an array → find matching object
+            const transcript = data.find(t => t.transcript_id === transcriptId);
+
+            const content = document.getElementById("content");
+
+            if (!transcript) {
+                content.innerHTML = "<p style='color:red;'>Transcript not found.</p>";
+                return;
+            }
+
+            // Display metadata
+            content.innerHTML = `
+                <div class="section">
+                    <p><b>Time:</b> ${transcript.time_of_interaction}</p>
+                    <p><b>Domain:</b> ${transcript.domain}</p>
+                    <p><b>Intent:</b> ${transcript.intent}</p>
+                    <p><b>Reason:</b> ${transcript.reason_for_call}</p>
+                </div>
+
+                <h2>Conversation</h2>
+                <div id="conv"></div>
+            `;
+
+            // Render conversation messages
+            const convDiv = document.getElementById("conv");
+
+            transcript.conversation.forEach(msg => {
+                const div = document.createElement("div");
+                div.className = "msg";
+                div.innerHTML = `<span class="speaker">${msg.speaker}:</span> ${msg.text}`;
+                convDiv.appendChild(div);
             });
-    </script>
+        })
+        .catch(err => {
+            document.getElementById("content").textContent = "Error loading JSON.";
+            console.error(err);
+        });
+</script>
+
 </body>
 </html>
